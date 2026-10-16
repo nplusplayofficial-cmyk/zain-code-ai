@@ -23,6 +23,10 @@ Requirements: Node.js 20+ and (for local AI) Ollama with a coding model installe
 
 For local Ollama, start Ollama and pull the model named in `OLLAMA_MODEL` (default: `qwen2.5-coder:7b`).
 
+## Production / hosted deployment
+
+Build the frontend with `npm run build`, then start the single web service with `npm start`. Express serves the built frontend and the `/api/*` endpoints on the same port, using the platform-provided `PORT` value. For Replit Deployments, use `npm run build` as the build command and `npm start` as the run command, then add your selected provider key in Replit Secrets. A preview/workspace is not the same as a deployed, always-on production service.
+
 ## Hosted provider setup
 
 For a hosted environment such as Replit, add the key for the provider you choose in the platform's **Secrets / Environment variables** panel. Do not commit real keys to GitHub, put them in frontend variables, or share them in chat.
