@@ -41,6 +41,10 @@ For a hosted environment such as Replit, add the key for the provider you choose
 
 The model names can be overridden with the matching `*_MODEL` environment variable. Free availability, quotas, and model access vary by provider and can change. OpenAI API usage is billed separately from a ChatGPT subscription. A provider key is not included with this repository.
 
+GitHub Pages builds the frontend with the correct `/zain-code-ai/` asset base using `.github/workflows/pages.yml`. In **Settings → Pages**, set the publishing source to **GitHub Actions** so the built `dist` folder is deployed; the legacy branch-based Pages source serves raw JSX source and can result in a blank page.
+
+GitHub Pages is static hosting and cannot run the Express backend. To use code generation, deploy the backend to a Node-capable host and configure a backend API URL/proxy plus provider secrets there. The current frontend uses same-origin `/api` requests, so a separate backend requires a matching reverse proxy or a frontend API base URL configuration.
+
 The backend defaults to Ollama when no provider is selected in the request. On a hosted environment without Ollama, choose a configured hosted provider in the app. The backend health endpoint reports which providers have keys configured without exposing the keys themselves.
 
 ## Privacy and safety
