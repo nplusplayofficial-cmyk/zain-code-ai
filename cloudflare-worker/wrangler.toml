@@ -1,0 +1,8 @@
+name = "zain-code-ai-api"
+main = "src/index.js"
+compatibility_date = "2026-10-16"
+
+[vars]
+AI_PROVIDER = "gemini"
+GEMINI_MODEL = "gemini-2.5-flash"
+FRONTEND_ORIGIN = "https://nplusplayofficial-cmyk.github.io"
