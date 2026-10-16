@@ -22,7 +22,13 @@ function App() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    fetch('/api/health').then(r => r.json()).then(setHealth).catch(() => setHealth({ status: 'offline' }));
+    fetch('/api/health').then(r => r.json()).then(data => {
+      setHealth(data);
+      if (!data.ollamaAvailable) {
+        const firstConfigured = ['openrouter', 'groq', 'gemini', 'deepseek', 'openai'].find(name => data.providers?.[name]);
+        if (firstConfigured) setProvider(firstConfigured);
+      }
+    }).catch(() => setHealth({ status: 'offline' }));
   }, []);
 
   const tests = useMemo(() => {
