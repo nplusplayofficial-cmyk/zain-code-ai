@@ -43,7 +43,7 @@ The model names can be overridden with the matching `*_MODEL` environment variab
 
 GitHub Pages builds the frontend with the correct `/zain-code-ai/` asset base using `.github/workflows/pages.yml`. In **Settings → Pages**, set the publishing source to **GitHub Actions** so the built `dist` folder is deployed; the legacy branch-based Pages source serves raw JSX source and can result in a blank page.
 
-GitHub Pages is static hosting and cannot run the Express backend. To use code generation, deploy the backend to a Node-capable host and configure a backend API URL/proxy plus provider secrets there. The current frontend uses same-origin `/api` requests, so a separate backend requires a matching reverse proxy or a frontend API base URL configuration.
+GitHub Pages is static hosting and cannot run the Express backend. To connect the Pages frontend to a separately hosted backend, set the repository Actions variable `VITE_API_BASE_URL` to the backend origin (for example `https://your-backend.example`, with no trailing slash) under **Settings → Secrets and variables → Actions → Variables**, then redeploy. The frontend calls `${VITE_API_BASE_URL}/api/health` and `${VITE_API_BASE_URL}/api/generate`; if the variable is empty, it falls back to same-origin `/api`. On the backend host, set `FRONTEND_ORIGIN=https://nplusplayofficial-cmyk.github.io` and the selected AI provider secret. Never put provider API keys in the frontend or GitHub Actions variables.
 
 The backend defaults to Ollama when no provider is selected in the request. On a hosted environment without Ollama, choose a configured hosted provider in the app. The backend health endpoint reports which providers have keys configured without exposing the keys themselves.
 
