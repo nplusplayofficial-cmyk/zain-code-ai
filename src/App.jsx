@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Activity, ArrowUp, Check, CheckCircle2, ChevronDown, Code2, Copy, Cpu, ExternalLink, FileCode2, LoaderCircle, Menu, MessageSquare, Moon, PanelLeftClose, Plus, RotateCcw, Settings2, ShieldCheck, Sparkles, Terminal, Trash2, Zap } from 'lucide-react';
 
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
 const starterPrompt = 'Write a Python program that reads two integers and prints their sum.';
 const starterTests = [{ input: '5\n3\n', expected: '8' }];
 
@@ -22,7 +23,7 @@ function App() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    fetch('/api/health').then(r => r.json()).then(data => {
+    fetch(`${API_BASE_URL}/api/health`).then(r => r.json()).then(data => {
       setHealth(data);
       if (!data.ollamaAvailable) {
         const firstConfigured = ['openrouter', 'groq', 'gemini', 'deepseek', 'openai'].find(name => data.providers?.[name]);
@@ -41,7 +42,7 @@ function App() {
     if (!prompt.trim() || loading) return;
     setLoading(true); setError('');
     try {
-      const response = await fetch('/api/generate', {
+      const response = await fetch(`${API_BASE_URL}/api/generate`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: prompt.trim(), language, answerOnly, tests, provider })
       });
