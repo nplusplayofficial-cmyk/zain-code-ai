@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "backend": "node server.cjs"
+    "backend": "node server.cjs",
+    "test": "node tests/smoke.cjs"
   },
   "dependencies": {
     "cors": "^2.8.5",
