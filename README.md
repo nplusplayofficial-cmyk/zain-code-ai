@@ -25,7 +25,14 @@ For local Ollama, start Ollama and pull the model named in `OLLAMA_MODEL` (defau
 
 ## Production / hosted deployment
 
-Build the frontend with `npm run build`, then start the single web service with `npm start`. Express serves the built frontend and the `/api/*` endpoints on the same port, using the platform-provided `PORT` value. For Replit Deployments, use `npm run build` as the build command and `npm start` as the run command, then add your selected provider key in Replit Secrets. A preview/workspace is not the same as a deployed, always-on production service.
+The source code and deployment configuration are maintained in this GitHub repository. GitHub Pages hosts the static frontend; it cannot run the Express API server itself. The `render.yaml` Blueprint lets you create the backend as a free Render web service connected to this GitHub repository.
+
+1. Open Render and choose **New → Blueprint**, then select this GitHub repository and deploy the `render.yaml` blueprint.
+2. In the Render service environment, add `GEMINI_API_KEY` (or the provider key you want to use). Never put real API keys in GitHub files or frontend variables.
+3. After Render gives you the backend URL, open GitHub **Settings → Secrets and variables → Actions → Variables** and add `VITE_API_BASE_URL` with that backend origin, without a trailing slash.
+4. Re-run the **Deploy ZAIN Code AI to GitHub Pages** workflow. The frontend will call the backend's `/api/health` and `/api/generate` endpoints.
+
+Render free services may sleep when idle and free-tier availability can change. GitHub Actions can build and deploy code, but it is not an always-on API server.
 
 ## Hosted provider setup
 
