@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('node:path');
 
 const app = express();
 const PORT = Number(process.env.PORT || 3001);
@@ -145,4 +146,12 @@ app.post('/api/generate', async (req,res) => {
     res.status(502).json({error:hint});
   }
 });
-app.listen(PORT,'0.0.0.0',()=>console.log(`ZAIN backend listening on port ${PORT}`));
+const distPath = path.join(__dirname, 'dist');
+app.use(express.static(distPath));
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'), error => {
+    if (error && !res.headersSent) res.status(404).send('ZAIN frontend build not found. Run npm run build first.');
+  });
+});
+
+app.listen(PORT,'0.0.0.0',()=>console.log(`ZAIN server listening on port ${PORT}`));
