@@ -80,7 +80,7 @@ async function generateWithCompatibleProvider(provider, { question, language, an
   if (!config) throw new Error('Unsupported AI provider.');
   if (!config.key) throw new Error(`${config.label} is not configured. Add its API key in Replit Secrets; never paste keys into chat or source code.`);
   const system = `You are ZAIN, a careful coding assistant. Write correct ${language} code for the user's task. ${answerOnly ? 'Return only code without Markdown fences or commentary.' : 'Explain key decisions briefly, then show code.'} Do not claim code was executed unless verification reports execution.`;
-  const testText = tests.length ? '\\nSample tests (stdin => expected stdout):\\n' + tests.map((t,i) => `Test ${i+1}: input=${JSON.stringify(t.input)} expected=${JSON.stringify(t.expected)}`).join('\\n') : '';
+  const testText = tests.length ? '\nSample tests (stdin => expected stdout):\n' + tests.map((t,i) => `Test ${i+1}: input=${JSON.stringify(t.input)} expected=${JSON.stringify(t.expected)}`).join('\n') : '';
   const headers = { 'Content-Type':'application/json', Authorization: `Bearer ${config.key}` };
   if (provider === 'openrouter') { headers['HTTP-Referer'] = process.env.APP_PUBLIC_URL || 'https://github.com/nplusplayofficial-cmyk/zain-code-ai'; headers['X-Title'] = 'ZAIN Code AI'; }
   const data = await requestJson(config.url, { method:'POST', headers, body:JSON.stringify({ model:config.model, messages:[{role:'system',content:system},{role:'user',content:question+testText}], temperature:0.1, max_tokens:4096 }) }, 90000);
