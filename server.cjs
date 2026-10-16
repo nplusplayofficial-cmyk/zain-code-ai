@@ -7,9 +7,20 @@ const PORT = Number(process.env.PORT || 3001);
 const OLLAMA_BASE_URL = (process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434').replace(/\/$/, '');
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen2.5-coder:7b';
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'meta-llama/llama-3.3-70b-instruct:free';
+const GROQ_MODEL = process.env.GROQ_MODEL || 'qwen/qwen3-32b';
+const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4.1-mini';
+const DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
 const FRONTEND_ORIGINS = (process.env.FRONTEND_ORIGIN || 'http://127.0.0.1:5173,http://localhost:5173').split(',').map(s => s.trim()).filter(Boolean);
+function isAllowedOrigin(origin) {
+  if (!origin || FRONTEND_ORIGINS.includes(origin)) return true;
+  try {
+    const host = new URL(origin).hostname;
+    return host.endsWith('.replit.dev') || host.endsWith('.replit.app');
+  } catch { return false; }
+}
 
-app.use(cors({ origin(origin, callback) { if (!origin || FRONTEND_ORIGINS.includes(origin)) return callback(null, true); return callback(new Error('Origin not allowed by CORS')); } }));
+app.use(cors({ origin(origin, callback) { if (isAllowedOrigin(origin)) return callback(null, true); return callback(new Error('Origin not allowed by CORS')); } }));
 app.use(express.json({ limit: '1mb' }));
 
 function normalizeLanguage(value) {
@@ -59,6 +70,24 @@ async function generateWithGemini({ question, language, answerOnly, tests }) {
   if (!answer) throw new Error('Gemini returned an empty response. Check model availability and API quota.');
   return { answer:extractCode(answer), provider:'gemini', model:GEMINI_MODEL };
 }
+async function generateWithCompatibleProvider(provider, { question, language, answerOnly, tests }) {
+  const config = {
+    openrouter: { key: process.env.OPENROUTER_API_KEY, model: OPENROUTER_MODEL, url: 'https://openrouter.ai/api/v1/chat/completions', label: 'OpenRouter' },
+    groq: { key: process.env.GROQ_API_KEY, model: GROQ_MODEL, url: 'https://api.groq.com/openai/v1/chat/completions', label: 'Groq' },
+    openai: { key: process.env.OPENAI_API_KEY, model: OPENAI_MODEL, url: 'https://api.openai.com/v1/chat/completions', label: 'OpenAI' },
+    deepseek: { key: process.env.DEEPSEEK_API_KEY, model: DEEPSEEK_MODEL, url: 'https://api.deepseek.com/chat/completions', label: 'DeepSeek' }
+  }[provider];
+  if (!config) throw new Error('Unsupported AI provider.');
+  if (!config.key) throw new Error(`${config.label} is not configured. Add its API key in Replit Secrets; never paste keys into chat or source code.`);
+  const system = `You are ZAIN, a careful coding assistant. Write correct ${language} code for the user's task. ${answerOnly ? 'Return only code without Markdown fences or commentary.' : 'Explain key decisions briefly, then show code.'} Do not claim code was executed unless verification reports execution.`;
+  const testText = tests.length ? '\\nSample tests (stdin => expected stdout):\\n' + tests.map((t,i) => `Test ${i+1}: input=${JSON.stringify(t.input)} expected=${JSON.stringify(t.expected)}`).join('\\n') : '';
+  const headers = { 'Content-Type':'application/json', Authorization: `Bearer ${config.key}` };
+  if (provider === 'openrouter') { headers['HTTP-Referer'] = process.env.APP_PUBLIC_URL || 'https://github.com/nplusplayofficial-cmyk/zain-code-ai'; headers['X-Title'] = 'ZAIN Code AI'; }
+  const data = await requestJson(config.url, { method:'POST', headers, body:JSON.stringify({ model:config.model, messages:[{role:'system',content:system},{role:'user',content:question+testText}], temperature:0.1, max_tokens:4096 }) }, 90000);
+  const answer = data?.choices?.[0]?.message?.content;
+  if (!answer) throw new Error(`${config.label} returned an empty response. Check model availability, API key, and quota.`);
+  return { answer:extractCode(answer), provider, model:config.model };
+}
 async function verifyPython(answer, tests) {
   const verification = { syntaxValid:null, validatorAvailable:false, testsRun:0, testsPassed:0, tests:[] };
   const python = process.env.PYTHON_EXECUTABLE || (process.platform === 'win32' ? 'python' : 'python3');
@@ -94,7 +123,7 @@ async function verifyPython(answer, tests) {
 app.get('/api/health', async (_req,res) => {
   let ollamaAvailable=false;
   try { const data=await requestJson(OLLAMA_BASE_URL+'/api/tags',{},2500); ollamaAvailable=Array.isArray(data.models); } catch {}
-  res.json({status:'ok',service:'ZAIN Code AI',defaultProvider:process.env.AI_PROVIDER||'ollama',model:OLLAMA_MODEL,ollamaAvailable,geminiConfigured:Boolean(process.env.GEMINI_API_KEY),pythonConfigured:true});
+  res.json({status:'ok',service:'ZAIN Code AI',defaultProvider:process.env.AI_PROVIDER||'ollama',model:OLLAMA_MODEL,ollamaAvailable,providers:{ollama:ollamaAvailable,gemini:Boolean(process.env.GEMINI_API_KEY),openrouter:Boolean(process.env.OPENROUTER_API_KEY),groq:Boolean(process.env.GROQ_API_KEY),openai:Boolean(process.env.OPENAI_API_KEY),deepseek:Boolean(process.env.DEEPSEEK_API_KEY)},pythonConfigured:true});
 });
 app.post('/api/generate', async (req,res) => {
   const question=String(req.body?.question||'').trim();
@@ -105,8 +134,8 @@ app.post('/api/generate', async (req,res) => {
   const provider=String(req.body?.provider||process.env.AI_PROVIDER||'ollama').toLowerCase();
   const tests=Array.isArray(req.body?.tests)?req.body.tests.slice(0,5).map(t=>({input:String(t?.input??''),expected:String(t?.expected??'')})):[];
   try {
-    const generated=provider==='gemini'?await generateWithGemini({question,language,answerOnly,tests}):provider==='ollama'?await generateWithOllama({question,language,answerOnly,tests}):null;
-    if(!generated) return res.status(400).json({error:'Unknown provider. Choose ollama or gemini.'});
+    const generated=provider==='gemini'?await generateWithGemini({question,language,answerOnly,tests}):provider==='ollama'?await generateWithOllama({question,language,answerOnly,tests}):['openrouter','groq','openai','deepseek'].includes(provider)?await generateWithCompatibleProvider(provider,{question,language,answerOnly,tests}):null;
+    if(!generated) return res.status(400).json({error:'Unknown provider. Choose ollama, gemini, openrouter, groq, openai, or deepseek.'});
     let verification={syntaxValid:null,validatorAvailable:false,testsRun:0,testsPassed:0,tests:[]};
     if(language==='Python') verification=await verifyPython(generated.answer,tests);
     res.json({answer:generated.answer,provider:generated.provider,model:generated.model,verification});
@@ -116,4 +145,4 @@ app.post('/api/generate', async (req,res) => {
     res.status(502).json({error:hint});
   }
 });
-app.listen(PORT,'127.0.0.1',()=>console.log(`ZAIN backend listening at http://127.0.0.1:${PORT}`));
+app.listen(PORT,'0.0.0.0',()=>console.log(`ZAIN backend listening on port ${PORT}`));
