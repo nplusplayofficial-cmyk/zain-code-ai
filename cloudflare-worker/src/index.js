@@ -37,7 +37,7 @@ async function geminiGenerate(body, env) {
   const model = env.GEMINI_MODEL || 'gemini-2.5-flash';
   const system = `You are ZAIN, a careful coding assistant. Write correct ${body.language} code for the user's task. ${body.answerOnly ? 'Return only code, without Markdown fences or commentary.' : 'Give a concise explanation followed by code.'} Never claim code was executed unless a verification service actually ran it.`;
   const tests = Array.isArray(body.tests) ? body.tests.slice(0, 5) : [];
-  const testText = tests.length ? '\\nSample tests to account for:\\n' + tests.map((test, i) => `Test ${i + 1}: input=${JSON.stringify(test.input)} expected output=${JSON.stringify(test.expected)}`).join('\\n') : '';
+  const testText = tests.length ? '\nSample tests to account for:\n' + tests.map((test, i) => `Test ${i + 1}: input=${JSON.stringify(test.input)} expected output=${JSON.stringify(test.expected)}`).join('\n') : '';
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -63,7 +63,7 @@ async function compatibleGenerate(provider, body, env) {
   const model = env[config.model] || config.fallbackModel;
   const tests = Array.isArray(body.tests) ? body.tests.slice(0, 5) : [];
   const system = `You are ZAIN, a careful coding assistant. Write correct ${body.language} code for the user's task. ${body.answerOnly ? 'Return only code without Markdown fences or commentary.' : 'Explain key decisions briefly, then show code.'} Do not claim code was executed unless verification reports execution.`;
-  const testText = tests.length ? '\\nSample tests (stdin => expected stdout):\\n' + tests.map((test, i) => `Test ${i + 1}: input=${JSON.stringify(test.input)} expected=${JSON.stringify(test.expected)}`).join('\\n') : '';
+  const testText = tests.length ? '\nSample tests (stdin => expected stdout):\n' + tests.map((test, i) => `Test ${i + 1}: input=${JSON.stringify(test.input)} expected=${JSON.stringify(test.expected)}`).join('\n') : '';
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` };
   if (provider === 'openrouter') {
     headers['HTTP-Referer'] = 'https://github.com/nplusplayofficial-cmyk/zain-code-ai';
